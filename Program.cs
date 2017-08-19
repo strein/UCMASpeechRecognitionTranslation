@@ -14,8 +14,7 @@ namespace UCMASpeedRecognitionTranslation
 
         static void Main(string[] args)
         {
-            AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionTrapper;
-            //quick and dirty error handling :)
+            AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionTrapper;            //quick and dirty error handling :)
             _server = new LyncServer();
             var t = _server.Start();
             _server.IncomingCall += server_IncomingCall;
