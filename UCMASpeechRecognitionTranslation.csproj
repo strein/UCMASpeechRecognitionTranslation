@@ -7,8 +7,8 @@
     <ProjectGuid>{0BA261A9-6D77-47FD-858C-A4F343364386}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UCMA_IVR_Demo</RootNamespace>
-    <AssemblyName>UCMA-IVR-Demo</AssemblyName>
+    <RootNamespace>UCMASpeechRecognitionTranslation</RootNamespace>
+    <AssemblyName>UCMASpeechRecognitionTranslation</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -95,6 +95,8 @@
     <Compile Include="UCMA Task Extensions\AudioVideoMcuSessionMethods.cs" />
     <Compile Include="UCMA Task Extensions\CallMethods.cs" />
     <Compile Include="UCMA Task Extensions\CollaborationPlatformMethods.cs" />
+    <Compile Include="UCMA Task Extensions\ConferenceInvitationMethods.cs" />
+    <Compile Include="UCMA Task Extensions\ConferenceSessionMethods.cs" />
     <Compile Include="UCMA Task Extensions\InstantMessagingFlowMethods.cs" />
     <Compile Include="UCMA Task Extensions\LocalEndpointMethods.cs" />
   </ItemGroup>

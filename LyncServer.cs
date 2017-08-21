@@ -5,7 +5,7 @@ using System;
 using System.Configuration;
 using System.Threading.Tasks;
 
-namespace UCMASpeedRecognitionTranslation
+namespace UCMASpeechRecognitionTranslation
 {
     public class LyncServer
     {
@@ -16,6 +16,7 @@ namespace UCMASpeedRecognitionTranslation
        
         public event EventHandler<EventArgs> LyncServerReady = delegate { };
         public event EventHandler<CallReceivedEventArgs<AudioVideoCall>> IncomingCall = delegate { };
+        public event EventHandler<ConferenceInvitationReceivedEventArgs> IncomingConference = delegate { };
 
         public async Task Start()
         {
@@ -46,10 +47,18 @@ namespace UCMASpeedRecognitionTranslation
             Console.WriteLine(string.Format("New Endpoint {0} discovered", e.ApplicationEndpointSettings.OwnerUri));
             _endpoint = new ApplicationEndpoint(_collabPlatform, e.ApplicationEndpointSettings);
             _endpoint.RegisterForIncomingCall<AudioVideoCall>(OnIncomingCall);
+            _endpoint.ConferenceInvitationReceived += _endpoint_ConferenceInvitationReceived;
             await _endpoint.EstablishAsync();
             Console.WriteLine("Endpoint established");
             
             LyncServerReady(this, new EventArgs());
+        }
+
+        //new incoming conference call
+        private void _endpoint_ConferenceInvitationReceived(object sender, ConferenceInvitationReceivedEventArgs e)
+        {
+            Console.WriteLine(string.Format("Conference Invite! Conf ID: {0}", e.Invitation.ConferenceUri));
+            IncomingConference(this, e);
         }
 
         //new incoming audio call

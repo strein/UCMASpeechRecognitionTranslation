@@ -3,9 +3,10 @@ using Microsoft.Rtc.Collaboration.AudioVideo;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using Microsoft.Rtc.Collaboration;
 
-
-namespace UCMASpeedRecognitionTranslation
+namespace UCMASpeechRecognitionTranslation
 {
     class Program
     {
@@ -18,13 +19,14 @@ namespace UCMASpeedRecognitionTranslation
             _server = new LyncServer();
             var t = _server.Start();
             _server.IncomingCall += server_IncomingCall;
+            _server.IncomingConference += _server_IncomingConference;
 
             var cancellationToken = new CancellationToken();
             _speech = new SpeechEngine(cancellationToken);
 
             _speech.Disconnected += _speech_Disconnected;
-            _speech.Failed += _speech_Failed;            
-            
+            _speech.Failed += _speech_Failed;
+
             var authenticated = _speech.Authenticate().Result;
             if (authenticated)
             {
@@ -36,12 +38,11 @@ namespace UCMASpeedRecognitionTranslation
             _server.Stop().Wait();
         }
 
-     
-       
+
 
         private static void _speech_Failed(object sender, Exception e)
         {
-            Console.WriteLine("_speech_Failed:" + e.ToString() );
+            Console.WriteLine("_speech_Failed:" + e.ToString());
         }
 
         private static void _speech_Disconnected(object sender, EventArgs e)
@@ -75,11 +76,37 @@ namespace UCMASpeedRecognitionTranslation
             {
                 Console.WriteLine("Incoming Call Handler:" + ex.ToString());
             }
+
+
         }
-       
+
+        private async static void _server_IncomingConference(object sender, Microsoft.Rtc.Collaboration.ConferenceInvitationReceivedEventArgs e)
+        {
+            try
+            {
+                await e.Invitation.AcceptAsync();
+               await e.Invitation.Conversation.ConferenceSession.JoinAsync(new ConferenceJoinOptions());
+                Console.WriteLine("joined");
+                
+                var audioCall = new AudioVideoCall(e.Invitation.Conversation);
+                audioCall.AudioVideoFlowConfigurationRequested += Call_AudioVideoFlowConfigurationRequested;
+                await audioCall.EstablishAsync();
+              
+                
+                var imCallHandler = new IMCallHandler(_speech);
+               await  imCallHandler.Init(e.Invitation.Conversation);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+          
+        }
+
 
         static void Call_AudioVideoFlowConfigurationRequested(object sender, AudioVideoFlowConfigurationRequestedEventArgs e)
         {
+            Console.WriteLine("flow config requested");
             e.Flow.StateChanged += Flow_StateChanged;
         }
 

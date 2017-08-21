@@ -8,7 +8,7 @@ using System.Speech.Synthesis;
 using System.Text;
 using System.Threading;
 
-namespace UCMASpeedRecognitionTranslation
+namespace UCMASpeechRecognitionTranslation
 {
     class AudioCallHandler
     {

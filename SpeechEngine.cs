@@ -5,7 +5,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace UCMASpeedRecognitionTranslation
+namespace UCMASpeechRecognitionTranslation
 {
     public class SpeechEngine
     {
@@ -114,6 +114,7 @@ namespace UCMASpeedRecognitionTranslation
                     try
                     {
                         await this.webSocketClient.SendAsync(item, WebSocketMessageType.Binary, true, CancellationToken.None);
+                        
                     }
 
                     catch (Exception ex)

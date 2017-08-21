@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("UCMA-IVR-Demo")]
+[assembly: AssemblyTitle("UCMASpeechRecognitionTranslation")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("ThoughtStuff")]
-[assembly: AssemblyProduct("UCMA-IVR-Demo")]
-[assembly: AssemblyCopyright("Copyright ©  2015 Tom Morgan")]
+[assembly: AssemblyProduct("UCMA Speech Recognition and Translation Sample")]
+[assembly: AssemblyCopyright("Copyright ©  2017 Tom Morgan")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
