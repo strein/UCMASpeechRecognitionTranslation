@@ -1,6 +1,6 @@
 # UCMA Speech Transcription and Translation Bot Sample
 
-This is the source code which accompanies the blog post: Building a Speed Transcription and Translation Bot in Skype for Business using UCMA and Microsoft Translator API
+This is the source code which accompanies the blog post: [Building a Speed Transcription and Translation Bot in Skype for Business using UCMA and Microsoft Translator API](https://blog.thoughtstuff.co.uk/2017/08/building-a-speech-transcription-and-translation-bot-in-skype-for-business-using-ucma-and-microsoft-translator-api/)
 
 > 
 
