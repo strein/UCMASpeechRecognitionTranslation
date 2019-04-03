@@ -13,13 +13,13 @@ namespace UCMASpeechRecognitionTranslation
         private InstantMessagingFlow _imFlow;
         private InstantMessagingCall _call;
         private SpeechEngine _speech;
-        
-        private const string messageToIM = "{0} [{1}]";  //{0} = translated text, {1} = original text
+
+        private const string messageToIM = "{0}"; // [{1}]";  //{0} = translated text, {1} = original text
 
         public IMCallHandler(SpeechEngine speech)
         {
             this._speech = speech;
-            _speech.OnEndOfTextData += _speech_OnEndOfTextData;
+            _speech.OnTextRecognized += _speech_OnEndOfTextData;
         }
 
         public async Task Init(Conversation conversation)
@@ -53,6 +53,20 @@ namespace UCMASpeechRecognitionTranslation
                 Console.WriteLine("Exception sending IM:" + ex.ToString());
             }
         }
+
+
+        private async void _speech_OnEndOfTextData(object sender, string e)
+        {
+            try
+            {
+                await SendInstantMessageResult(String.Format(messageToIM, e));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception sending IM:" + ex.ToString());
+            }
+        }
+
 
         private async Task SendInstantMessageResult(string message)
         {

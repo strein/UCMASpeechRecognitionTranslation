@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace Microsoft.Translator.API
+namespace Microsoft.Speech.API
 {
     /// <summary>
     /// Client to call Cognitive Services Azure Auth Token service in order to get an access token.
@@ -11,7 +11,7 @@ namespace Microsoft.Translator.API
     public class AzureAuthToken
     {
         /// URL of the token service
-        private static readonly Uri ServiceUrl = new Uri("https://api.cognitive.microsoft.com/sts/v1.0/issueToken");
+        //private static readonly Uri ServiceUrl = new Uri("https://api.cognitive.microsoft.com/sts/v1.0/issueToken");
         /// Name of header used to pass the subscription key to the token service
         private const string OcpApimSubscriptionKeyHeader = "Ocp-Apim-Subscription-Key";
         /// After obtaining a valid token, this class will cache it for this duration.
@@ -25,6 +25,7 @@ namespace Microsoft.Translator.API
 
         /// Gets the subscription key.
         public string SubscriptionKey { get; private set; }
+        public string AzureRegion { get; private set; }
 
         /// Gets the HTTP status code for the most recent request to the token service.
         public HttpStatusCode RequestStatusCode { get; private set; }
@@ -33,7 +34,7 @@ namespace Microsoft.Translator.API
         /// Creates a client to obtain an access token.
         /// </summary>
         /// <param name="key">Subscription key to use to get an authentication token.</param>
-        public AzureAuthToken(string key)
+        public AzureAuthToken(string key, string region)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -41,6 +42,7 @@ namespace Microsoft.Translator.API
             }
 
             this.SubscriptionKey = key;
+            this.AzureRegion = region;
             this.RequestStatusCode = HttpStatusCode.InternalServerError;
         }
 
@@ -64,18 +66,30 @@ namespace Microsoft.Translator.API
             }
 
             using (var client = new HttpClient())
-            using (var request = new HttpRequestMessage())
             {
+                /*
                 request.Method = HttpMethod.Post;
                 request.RequestUri = ServiceUrl;
                 request.Content = new StringContent(string.Empty);
                 request.Headers.TryAddWithoutValidation(OcpApimSubscriptionKeyHeader, this.SubscriptionKey);
-                var response = await client.SendAsync(request);
-                this.RequestStatusCode = response.StatusCode;
-                response.EnsureSuccessStatusCode();
-                var token = await response.Content.ReadAsStringAsync();
-                storedTokenTime = DateTime.Now;
-                storedTokenValue = "Bearer " + token;
+                */
+
+                Uri ServiceUrl = new Uri("https://" + this.AzureRegion + ".api.cognitive.microsoft.com/sts/v1.0/issueToken");
+
+                client.DefaultRequestHeaders.Add(OcpApimSubscriptionKeyHeader, this.SubscriptionKey);
+
+                var response = await client.PostAsync(ServiceUrl.AbsoluteUri, null);
+
+                if (response.IsSuccessStatusCode) { 
+                    var token = await response.Content.ReadAsStringAsync();
+                    storedTokenTime = DateTime.Now;
+                    storedTokenValue = token;
+                }
+                else
+                {
+                    throw new HttpRequestException($"Cannot get token from {ServiceUrl}. Error: {response.StatusCode}");
+                }
+
                 return storedTokenValue;
             }
         }

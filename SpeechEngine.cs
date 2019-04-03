@@ -1,42 +1,28 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Configuration;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CognitiveServices.Speech;
+using Microsoft.CognitiveServices.Speech.Audio;
 
 namespace UCMASpeechRecognitionTranslation
 {
     public class SpeechEngine
     {
-        private BlockingCollection<ArraySegment<byte>> outgoingMessageQueue = new BlockingCollection<ArraySegment<byte>>();
-        private ClientWebSocket webSocketClient;
+
         private CancellationToken _cancellationToken;
         private string authToken;
+        private string region;
 
         public event EventHandler Disconnected;
         public event EventHandler<Exception> Failed;
-        public event EventHandler<ArraySegment<byte>> OnTextData;
-        public event EventHandler<ArraySegment<byte>> OnEndOfTextData;
-        public event EventHandler<ArraySegment<byte>> OnBinaryData;
-        public event EventHandler<ArraySegment<byte>> OnEndOfBinaryData;
-
-        private const string translatorAPI = "wss://dev.microsofttranslator.com/speech/translate?from=en-US&to=de-DE&features=TimingInfo&api-version=1.0";
-        private const int ReceiveChunkSize = 8 * 1024;
-        private const int SendChunkSize = 8 * 1024;
-        private string clientID = ConfigurationManager.AppSettings["ClientID"];
-
-        public SpeechEngine(CancellationToken cancellationToken)
-        {
-            this.webSocketClient = new ClientWebSocket();
-            webSocketClient.Options.SetRequestHeader("X-ClientAppId", clientID);
-            this._cancellationToken = cancellationToken;
-        }
+        public event EventHandler<String> OnTextRecognized;
 
         public async Task<bool> Authenticate()
         {
-            string azureKey = ConfigurationManager.AppSettings["TranslatorAPIKey"];
-            Microsoft.Translator.API.AzureAuthToken tokenSource = new Microsoft.Translator.API.AzureAuthToken(azureKey);
+            string azureKey = ConfigurationManager.AppSettings["SubscriptionKey"];
+            region = ConfigurationManager.AppSettings["AzureRegion"];
+            Microsoft.Speech.API.AzureAuthToken tokenSource = new Microsoft.Speech.API.AzureAuthToken(azureKey, region);
             string token = await tokenSource.GetAccessTokenAsync();
             if (token.Length > 10)
             {
@@ -46,125 +32,84 @@ namespace UCMASpeechRecognitionTranslation
             return false;
         }
 
-
-        public async Task Connect()
+        public async Task StartRecognition()
         {
-            webSocketClient.Options.SetRequestHeader("Authorization", this.authToken);
-            await webSocketClient.ConnectAsync(new Uri(translatorAPI), this._cancellationToken);
 
-            var receiveTask = Task.Run(() => this.StartReceiving())
-                .ContinueWith((t) => ReportError(t))
-                .ConfigureAwait(false);
-            var sendTask = Task.Run(() => this.StartSending())
-                .ContinueWith((t) => ReportError(t))
-                .ConfigureAwait(false);
-        }
+            var config = SpeechConfig.FromAuthorizationToken(authToken, region);
 
-        public bool IsConnected()
-        {
-            WebSocketState wsState = WebSocketState.None;
-            try
+            var stopRecognition = new TaskCompletionSource<int>();
+
+            // Creates a speech recognizer using file as audio input.
+            // Replace with your own audio file name.
+            using (var audioInput = AudioConfig.FromWavFileInput(@"whatstheweatherlike.wav"))
             {
-                wsState = this.webSocketClient.State;
-
-            }
-            catch (ObjectDisposedException)
-            {
-                wsState = WebSocketState.None;
-            }
-            return ((this._cancellationToken.IsCancellationRequested == false)
-                 && ((wsState == WebSocketState.Open) || (wsState == WebSocketState.CloseReceived)));
-        }
-
-        public async Task Disconnect()
-        {
-            if (this.IsConnected())
-            {
-                try
+                using (var recognizer = new SpeechRecognizer(config, audioInput))
                 {
-                    await this.webSocketClient.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, this._cancellationToken);
-                }
-                finally
-                {
-                    if (this.Disconnected != null) this.Disconnected(this, EventArgs.Empty);
+                    // Subscribes to events.
+
+                    /* Recognizing process
+                    recognizer.Recognizing += (s, e) =>
+                    {
+                        Console.WriteLine($"RECOGNIZING: Text={e.Result.Text}");
+                    };
+                    */
+
+                    recognizer.Recognized += (s, e) =>
+                                        {
+                                            if (e.Result.Reason == ResultReason.RecognizedSpeech)
+                                            {
+                                                // Send to SfB Chat here
+                                                //this.OnTextRecognized(this, e.Result.Text);
+                                                Console.WriteLine($"RECOGNIZED: Text={e.Result.Text}");
+                                            }
+                                            else if (e.Result.Reason == ResultReason.NoMatch)
+                                            {
+                                                Console.WriteLine($"NOMATCH: Speech could not be recognized.");
+                                            }
+                                        };
+
+                    recognizer.Canceled += (s, e) =>
+                    {
+                        Console.WriteLine($"CANCELED: Reason={e.Reason}");
+
+                        if (e.Reason == CancellationReason.Error)
+                        {
+                            Console.WriteLine($"CANCELED: ErrorCode={e.ErrorCode}");
+                            Console.WriteLine($"CANCELED: ErrorDetails={e.ErrorDetails}");
+                            Console.WriteLine($"CANCELED: Did you update the subscription info?");
+                        }
+
+                        stopRecognition.TrySetResult(0);
+                    };
+
+                    recognizer.SessionStarted += (s, e) =>
+                    {
+                        Console.WriteLine("\n    Session started event.");
+                    };
+
+                    recognizer.SessionStopped += (s, e) =>
+                    {
+                        Console.WriteLine("\n    Session stopped event.");
+                        Console.WriteLine("\nStop recognition.");
+                        stopRecognition.TrySetResult(0);
+                    };
+
+                    // Starts continuous recognition. Uses StopContinuousRecognitionAsync() to stop recognition.
+                    await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
+
+                    // Waits for completion.
+                    // Use Task.WaitAny to keep the task rooted.
+                    Task.WaitAny(new[] { stopRecognition.Task });
+
+                    // Stops recognition.
+                    await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
                 }
             }
-        }
 
-        private void ReportError(Task task)
-        {
-            if (task.IsFaulted)
-            {
-                if (this.Failed != null) Failed(this, task.Exception);
-            }
         }
-
         public void SendMessage(ArraySegment<byte> content)
         {
-            this.outgoingMessageQueue.Add(content);
-        }
-
-        private async Task StartSending()
-        {
-            while (this.IsConnected())
-            {
-                ArraySegment<byte> item;
-                if (this.outgoingMessageQueue.TryTake(out item, 100))
-                {
-                    try
-                    {
-                        await this.webSocketClient.SendAsync(item, WebSocketMessageType.Binary, true, CancellationToken.None);
-                        
-                    }
-
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Exception iterating Queue: " + ex.ToString());
-                    }
-                }
-            }
-        }
-
-        private async Task StartReceiving()
-        {
-            var buffer = new byte[ReceiveChunkSize];
-            var arraySegmentBuffer = new ArraySegment<byte>(buffer);
-            Task<WebSocketReceiveResult> receiveTask = null;
-            bool disconnecting = false;
-            while (this.IsConnected() && !disconnecting)
-            {
-                if (receiveTask == null)
-                {
-                    receiveTask = this.webSocketClient.ReceiveAsync(arraySegmentBuffer, this._cancellationToken);
-                }
-                if (receiveTask.Wait(100))
-                {
-                    WebSocketReceiveResult result = await receiveTask;
-                    receiveTask = null;
-                    EventHandler<ArraySegment<byte>> handler = null;
-                    switch (result.MessageType)
-                    {
-                        case WebSocketMessageType.Close:
-                            disconnecting = true;
-                            Console.WriteLine($"{DateTime.Now} : Disconnecting web socket with status {result.CloseStatus} for the following reason: {result.CloseStatusDescription}");
-                            await this.Disconnect();
-                            break;
-                        case WebSocketMessageType.Binary:
-                            handler = result.EndOfMessage ? this.OnEndOfBinaryData : this.OnBinaryData;
-                            break;
-                        case WebSocketMessageType.Text:
-
-                            handler = result.EndOfMessage ? this.OnEndOfTextData : this.OnTextData;
-                            break;
-                    }
-                    if (handler != null)
-                    {
-                        var data = new byte[result.Count];
-                        Array.Copy(buffer, data, result.Count);
-                        handler(this, new ArraySegment<byte>(data));
-                    }
-                }
-            }
+            //this.outgoingMessageQueue.Add(content);
         }
     }
 }

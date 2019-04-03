@@ -21,8 +21,8 @@ namespace UCMASpeechRecognitionTranslation
             _server.IncomingCall += server_IncomingCall;
             _server.IncomingConference += _server_IncomingConference;
 
-            var cancellationToken = new CancellationToken();
-            _speech = new SpeechEngine(cancellationToken);
+            //var cancellationToken = new CancellationToken();
+            _speech = new SpeechEngine();
 
             _speech.Disconnected += _speech_Disconnected;
             _speech.Failed += _speech_Failed;
@@ -30,7 +30,7 @@ namespace UCMASpeechRecognitionTranslation
             var authenticated = _speech.Authenticate().Result;
             if (authenticated)
             {
-                _speech.Connect().Wait();
+                _speech.StartRecognition().Wait();
             }
 
             Console.WriteLine("Press any key to stop server and exit");

@@ -3,10 +3,10 @@ using NAudio.Wave;
 using NAudio.WindowsMediaFormat;
 using System;
 using System.IO;
-using System.Speech.AudioFormat;
-using System.Speech.Synthesis;
 using System.Text;
 using System.Threading;
+using System.Speech.AudioFormat;
+using Microsoft.CognitiveServices.Speech;
 
 namespace UCMASpeechRecognitionTranslation
 {
